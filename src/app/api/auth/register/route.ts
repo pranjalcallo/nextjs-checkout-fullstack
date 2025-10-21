@@ -1,20 +1,26 @@
-// src/app/api/auth/register/route.ts
 import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import prisma from '@/lib/db';
 import { generateAuthToken } from '@/lib/auth';
+import { z } from 'zod';
+
+const registerSchema = z.object({
+  name: z.string().min(1, 'Name is required'),
+  email: z.string().email('Invalid email format'),
+  password: z.string().min(6, 'Password must be at least 6 characters long'),
+});
 
 export async function POST(req: Request) {
   try {
-    const { name, email, password } = await req.json();
+    const body = await req.json();
+    const parsed = registerSchema.safeParse(body);
 
-    if (!email || !password || !name) {
-      return NextResponse.json({ message: 'Name, email, and password are required' }, { status: 400 });
+    if (!parsed.success) {
+      const errors = parsed.error.flatten().fieldErrors;
+      return NextResponse.json({ message: 'Validation failed', errors }, { status: 400 });
     }
 
-    if (password.length < 6) {
-      return NextResponse.json({ message: 'Password must be at least 6 characters long' }, { status: 400 });
-    }
+    const { name, email, password } = parsed.data;
 
     const existingUser = await prisma.user.findUnique({
       where: { email },
@@ -42,7 +48,6 @@ export async function POST(req: Request) {
     const token = generateAuthToken(user);
 
     return NextResponse.json({ user, token }, { status: 201 });
-
   } catch (error) {
     console.error('Registration error:', error);
     return NextResponse.json({ message: 'Internal server error' }, { status: 500 });

@@ -1,8 +1,12 @@
-// src/app/api/cart/route.ts
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
 import { authMiddleware } from '@/lib/auth';
+import { z } from 'zod';
 
+const addCartItemSchema = z.object({
+  productId: z.string().min(1, 'Product ID is required'),
+  quantity: z.number().int().positive('Quantity must be a positive integer'),
+});
 
 export async function GET(req: Request) {
   return authMiddleware(req, async (request, userId) => {
@@ -11,15 +15,12 @@ export async function GET(req: Request) {
         where: { userId },
         include: {
           items: {
-            include: {
-              product: true, 
-            },
+            include: { product: true },
           },
         },
       });
 
       if (!cart) {
-
         const newCart = await prisma.cart.create({
           data: { userId },
           include: { items: { include: { product: true } } },
@@ -35,15 +36,18 @@ export async function GET(req: Request) {
   });
 }
 
-
 export async function POST(req: Request) {
   return authMiddleware(req, async (request, userId) => {
     try {
-      const { productId, quantity } = await req.json();
+      const body = await req.json();
+      const parsed = addCartItemSchema.safeParse(body);
 
-      if (!productId || typeof quantity !== 'number' || quantity <= 0) {
-        return NextResponse.json({ message: 'Invalid product ID or quantity' }, { status: 400 });
+      if (!parsed.success) {
+        const errors = parsed.error.flatten().fieldErrors;
+        return NextResponse.json({ message: 'Validation failed', errors }, { status: 400 });
       }
+
+      const { productId, quantity } = parsed.data;
 
       let cart: any = await prisma.cart.findUnique({
         where: { userId },
@@ -59,7 +63,6 @@ export async function POST(req: Request) {
       const existingCartItem = cart.items.find((item: any) => item.productId === productId);
 
       if (existingCartItem) {
-        // Update quantity if item already in cart
         const updatedItem = await prisma.cartItem.update({
           where: { id: existingCartItem.id },
           data: { quantity: existingCartItem.quantity + quantity },
@@ -67,7 +70,6 @@ export async function POST(req: Request) {
         });
         return NextResponse.json(updatedItem, { status: 200 });
       } else {
-        // Add new item to cart
         const newItem = await prisma.cartItem.create({
           data: {
             cartId: cart.id,
@@ -78,7 +80,6 @@ export async function POST(req: Request) {
         });
         return NextResponse.json(newItem, { status: 201 });
       }
-
     } catch (error) {
       console.error('Error adding/updating cart item:', error);
       return NextResponse.json({ message: 'Failed to add item to cart' }, { status: 500 });

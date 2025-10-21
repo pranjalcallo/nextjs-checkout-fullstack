@@ -1,18 +1,25 @@
-// src/app/api/cart/[id]/route.ts
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
 import { authMiddleware } from '@/lib/auth';
+import { z } from 'zod';
 
+const updateCartItemSchema = z.object({
+  quantity: z.number().int().nonnegative('Quantity must be 0 or a positive integer'),
+});
 
 export async function PUT(req: Request, { params }: { params: { id: string } }) {
   return authMiddleware(req, async (request, userId) => {
     try {
       const cartItemId = params.id;
-      const { quantity } = await req.json();
+      const body = await req.json();
+      const parsed = updateCartItemSchema.safeParse(body);
 
-      if (typeof quantity !== 'number' || quantity < 0) {
-        return NextResponse.json({ message: 'Invalid quantity' }, { status: 400 });
+      if (!parsed.success) {
+        const errors = parsed.error.flatten().fieldErrors;
+        return NextResponse.json({ message: 'Validation failed', errors }, { status: 400 });
       }
+
+      const { quantity } = parsed.data;
 
       const cartItem = await prisma.cartItem.findUnique({
         where: { id: cartItemId },
@@ -24,7 +31,6 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
       }
 
       if (quantity === 0) {
-
         await prisma.cartItem.delete({
           where: { id: cartItemId },
         });
@@ -45,7 +51,6 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
     }
   });
 }
-
 
 export async function DELETE(req: Request, { params }: { params: { id: string } }) {
   return authMiddleware(req, async (request, userId) => {
