@@ -66,55 +66,105 @@ const CartItem: React.FC<CartItemProps> = ({ item }) => {
   }, [item.id, item.product.name, syncCart]);
 
   return (
-    <div className="flex items-center gap-4 py-4 border-b border-gray-200 last:border-b-0">
-      <div className="relative w-24 h-24 flex-shrink-0 rounded-md overflow-hidden">
+    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 py-4 border-b border-gray-200 last:border-b-0">
+      {/* Product Image */}
+      <div className="relative w-full xs:w-20 h-20 sm:w-24 sm:h-24 flex-shrink-0 rounded-md overflow-hidden bg-gray-100">
         <Image
           src={item.product.imageUrl || 'https://via.placeholder.com/100x100?text=No+Image'}
           alt={item.product.name}
           layout="fill"
           objectFit="cover"
+          className="transition-transform hover:scale-105"
         />
       </div>
-      <div className="flex-grow">
-        <h3 className="font-semibold text-lg">{item.product.name}</h3>
-        <p className="text-gray-600 text-sm">${item.product.price.toFixed(2)} each</p>
+
+      {/* Product Info */}
+      <div className="flex-grow w-full sm:w-auto">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <div className="flex-grow">
+            <h3 className="font-semibold text-base sm:text-lg line-clamp-2">{item.product.name}</h3>
+            <p className="text-gray-600 text-sm mt-1">${item.product.price.toFixed(2)} each</p>
+          </div>
+
+          {/* Mobile: Price and Remove */}
+          <div className="sm:hidden flex justify-between items-center mt-2">
+            <span className="font-bold text-lg">${(item.product.price * item.quantity).toFixed(2)}</span>
+            <Button
+              onClick={handleRemoveItem}
+              disabled={loading}
+              variant="danger"
+              size="sm"
+              aria-label={`Remove ${item.product.name} from cart`}
+            >
+              {loading ? '...' : 'Remove'}
+            </Button>
+          </div>
+        </div>
+
+        {/* Quantity Controls */}
+        <div className="flex items-center justify-between sm:justify-start gap-4 mt-3 sm:mt-4">
+          <div className="flex items-center gap-2">
+            <Button
+              onClick={() => handleQuantityChange(item.quantity - 1)}
+              disabled={loading || item.quantity <= 1}
+              variant="secondary"
+              size="sm"
+              className="w-8 h-8 flex items-center justify-center p-0"
+              aria-label={`Decrease quantity of ${item.product.name}`}
+            >
+              -
+            </Button>
+            <span className="w-8 text-center border rounded-md py-1 text-sm font-medium">
+              {item.quantity}
+            </span>
+            <Button
+              onClick={() => handleQuantityChange(item.quantity + 1)}
+              disabled={loading}
+              variant="secondary"
+              size="sm"
+              className="w-8 h-8 flex items-center justify-center p-0"
+              aria-label={`Increase quantity of ${item.product.name}`}
+            >
+              +
+            </Button>
+          </div>
+
+          {/* Desktop: Price and Remove */}
+          <div className="hidden sm:flex items-center gap-4 ml-auto">
+            <span className="font-bold text-lg min-w-[80px] text-right">
+              ${(item.product.price * item.quantity).toFixed(2)}
+            </span>
+            <Button
+              onClick={handleRemoveItem}
+              disabled={loading}
+              variant="danger"
+              size="sm"
+              aria-label={`Remove ${item.product.name} from cart`}
+            >
+              {loading ? '...' : 'Remove'}
+            </Button>
+          </div>
+        </div>
       </div>
-      <div className="flex items-center gap-2">
-        <Button
-          onClick={() => handleQuantityChange(item.quantity - 1)}
-          disabled={loading || item.quantity <= 1}
-          variant="secondary"
-          size="sm"
-          aria-label={`Decrease quantity of ${item.product.name}`}
-        >
-          -
-        </Button>
-        <span className="w-8 text-center border rounded-md py-1">{item.quantity}</span>
-        <Button
-          onClick={() => handleQuantityChange(item.quantity + 1)}
-          disabled={loading}
-          variant="secondary"
-          size="sm"
-          aria-label={`Increase quantity of ${item.product.name}`}
-        >
-          +
-        </Button>
+
+      {/* Alternative Mobile Layout for very small screens */}
+      <div className="xs:hidden w-full">
+        <div className="flex justify-between items-center pt-2 border-t border-gray-100">
+          <div className="text-sm text-gray-600">
+            Total: <span className="font-bold text-base">${(item.product.price * item.quantity).toFixed(2)}</span>
+          </div>
+          <Button
+            onClick={handleRemoveItem}
+            disabled={loading}
+            variant="danger"
+            size="sm"
+          >
+            {loading ? '...' : 'Remove'}
+          </Button>
+        </div>
       </div>
-      <div className="text-right w-20">
-        <span className="font-bold text-lg">${(item.product.price * item.quantity).toFixed(2)}</span>
-      </div>
-      <Button
-        onClick={handleRemoveItem}
-        disabled={loading}
-        variant="danger"
-        size="sm"
-        className="ml-4"
-        aria-label={`Remove ${item.product.name} from cart`}
-      >
-        {loading ? '...' : 'Remove'}
-      </Button>
     </div>
   );
 };
 
-export default memo(CartItem); 
+export default memo(CartItem);
